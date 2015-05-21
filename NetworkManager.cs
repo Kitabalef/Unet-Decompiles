@@ -623,6 +623,8 @@ namespace UnityEngine.Networking
             }
           }
         }
+
+        // Checking here if there is more than one player connected from this client to make total player number correct
         using (List<NetworkConnection>.Enumerator enumerator1 = NetworkServer.localConnections.GetEnumerator())
         {
           while (enumerator1.MoveNext())
@@ -650,6 +652,7 @@ namespace UnityEngine.Networking
       LogFilter.currentLogLevel = (int) this.m_LogLevel;
       if (this.m_DontDestroyOnLoad)
       {
+          // Reinforce the singelton idea here by deleting a copy if made
         if ((UnityEngine.Object) NetworkManager.singleton != (UnityEngine.Object) null)
         {
           if (LogFilter.logDebug)
@@ -659,15 +662,17 @@ namespace UnityEngine.Networking
         }
         if (LogFilter.logDev)
           Debug.Log((object) "NetworkManager created singleton (DontDestroyOnLoad)");
-        NetworkManager.singleton = this;
-        UnityEngine.Object.DontDestroyOnLoad((UnityEngine.Object) this.gameObject);
+        NetworkManager.singleton = this; // set the singleton field for the network game
+        UnityEngine.Object.DontDestroyOnLoad((UnityEngine.Object) this.gameObject); // persist the same NetManager/singleton object between scenes
       }
-      else
+      else // NetManager will not persist between scenes
       {
         if (LogFilter.logDev)
           Debug.Log((object) "NetworkManager created singleton (ForScene)");
         NetworkManager.singleton = this;
       }
+
+      
       if (this.m_NetworkAddress != string.Empty)
       {
         NetworkManager.s_address = this.m_NetworkAddress;
@@ -707,6 +712,8 @@ namespace UnityEngine.Networking
       NetworkServer.RegisterHandler((short) 34, new NetworkMessageDelegate(this.OnServerErrorInternal));
     }
 
+    // overloads to handle different config param cases for starting a stand alone server
+    #region StartServer() overloads
     public bool StartServer(ConnectionConfig config, int maxConnections)
     {
       return this.StartServer((MatchInfo) null, config, maxConnections);
@@ -742,6 +749,8 @@ namespace UnityEngine.Networking
       this.OnStartServer();
       if (this.m_RunInBackground)
         Application.runInBackground = true;
+
+      // Check if we have been given custom config info and configure server accordingly if so
       if (this.m_CustomConfig && this.m_ConnectionConfig != null && config == null)
       {
         this.m_ConnectionConfig.Channels.Clear();
@@ -754,10 +763,17 @@ namespace UnityEngine.Networking
         }
         NetworkServer.Configure(this.m_ConnectionConfig, this.m_MaxConnections);
       }
+     
+      // register server handlers
       this.RegisterServerMessages();
-      NetworkServer.sendPeerInfo = this.m_SendPeerInfo;
+
+      NetworkServer.sendPeerInfo = this.m_SendPeerInfo; // check if we are to send peer info also
+
+      // if no custom config has been set and a config param was sent in then use that config
       if (config != null)
         NetworkServer.Configure(config, maxConnections);
+
+      // check the MatchInfo param
       if (info != null)
       {
         if (!NetworkServer.Listen(info, this.m_NetworkPort))
@@ -773,16 +789,24 @@ namespace UnityEngine.Networking
           Debug.LogError((object) "StartServer listen failed.");
         return false;
       }
+
+
       if (LogFilter.logDebug)
         Debug.Log((object) ("NetworkManager StartServer port:" + (object) this.m_NetworkPort));
-      this.isNetworkActive = true;
+
+      this.isNetworkActive = true; // set the flag indicating this object is network active
+      // transition to the online scene if its name has been set(must be included in build settings before being allowed to be set)
       if (this.m_OnlineScene != string.Empty && this.m_OnlineScene != Application.loadedLevelName && this.m_OnlineScene != this.m_OfflineScene)
         this.ServerChangeScene(this.m_OnlineScene);
       else
         NetworkServer.SpawnObjects();
+
       return true;
     }
+    #endregion
 
+
+    // This provided NetManager accounts for a client, server, or host. Register handlers for a client here using the NetworkClient field
     internal void RegisterClientMessages(NetworkClient client)
     {
       client.RegisterHandler((short) 32, new NetworkMessageDelegate(this.OnClientConnectInternal));
@@ -790,8 +814,12 @@ namespace UnityEngine.Networking
       client.RegisterHandler((short) 36, new NetworkMessageDelegate(this.OnClientNotReadyMessageInternal));
       client.RegisterHandler((short) 34, new NetworkMessageDelegate(this.OnClientErrorInternal));
       client.RegisterHandler((short) 39, new NetworkMessageDelegate(this.OnClientSceneInternal));
+
+      // handle the registering of the clients prefab also so it doesnt need to be done manually from separate client code
       if ((UnityEngine.Object) this.m_PlayerPrefab != (UnityEngine.Object) null)
         ClientScene.RegisterPrefab(this.m_PlayerPrefab);
+      
+      // Also register any prefabs added in the inspector so they are included in the game for the client, no manual client code also needed
       using (List<GameObject>.Enumerator enumerator = this.m_SpawnPrefabs.GetEnumerator())
       {
         while (enumerator.MoveNext())
@@ -803,17 +831,24 @@ namespace UnityEngine.Networking
       }
     }
 
+    // overloads to handle different config param cases for connecting as a Client
+    #region StartClient() overloads
+    // Connections methods return a NetworkClient object, this method connects according to the endpoint being used
     public NetworkClient StartClient(MatchInfo info, ConnectionConfig config)
     {
       this.matchInfo = info;
+
       if (this.m_RunInBackground)
         Application.runInBackground = true;
+
       this.isNetworkActive = true;
       this.client = new NetworkClient();
       this.OnStartClient(this.client);
+
+      // if not using a custom config
       if (config != null)
         this.client.Configure(config, 1);
-      else if (this.m_CustomConfig && this.m_ConnectionConfig != null)
+      else if (this.m_CustomConfig && this.m_ConnectionConfig != null) // else using a custom config setup for our clients
       {
         this.m_ConnectionConfig.Channels.Clear();
         using (List<QosType>.Enumerator enumerator = this.m_Channels.GetEnumerator())
@@ -825,20 +860,23 @@ namespace UnityEngine.Networking
         }
         this.client.Configure(this.m_ConnectionConfig, this.m_MaxConnections);
       }
-      this.RegisterClientMessages(this.client);
+
+      this.RegisterClientMessages(this.client); // register client handlers
+
+      // if a match was sent in then connect to that game
       if (this.matchInfo != null)
       {
         if (LogFilter.logDebug)
           Debug.Log((object) ("NetworkManager StartClient match: " + (object) this.matchInfo));
         this.client.Connect(this.matchInfo);
       }
-      else if (this.m_EndPoint != null)
+      else if (this.m_EndPoint != null) // if we are connecting to an endpoint used by something like XboxOne, then connect there
       {
         if (LogFilter.logDebug)
           Debug.Log((object) "NetworkManager StartClient using provided SecureTunnel");
         this.client.Connect(this.m_EndPoint);
       }
-      else
+      else // we are going to local connect otherwise if address has been set
       {
         if (string.IsNullOrEmpty(this.m_NetworkAddress))
         {
@@ -864,15 +902,20 @@ namespace UnityEngine.Networking
           objArray[index4] = (object) local;
           Debug.Log((object) string.Concat(objArray));
         }
+
+        // if using simulator connect that way, otherwise just complete the local network connect
         if (this.m_UseSimulator)
           this.client.ConnectWithSimulator(this.m_NetworkAddress, this.m_NetworkPort, this.m_SimulatedLatency, this.m_PacketLossPercentage);
         else
           this.client.Connect(this.m_NetworkAddress, this.m_NetworkPort);
       }
+
       NetworkManager.s_address = this.m_NetworkAddress;
+
       return this.client;
     }
 
+    // StartClient overload that passes info on to other overload
     public NetworkClient StartClient(MatchInfo matchInfo)
     {
       return this.StartClient(matchInfo, (ConnectionConfig) null);
@@ -897,7 +940,10 @@ namespace UnityEngine.Networking
     {
       return this.StartClient((MatchInfo) null, (ConnectionConfig) null);
     }
+    #endregion
 
+    // overloads to handle different config param cases for starting a Host
+    #region StartHost() overloads
     public virtual NetworkClient StartHost(ConnectionConfig config, int maxConnections)
     {
       this.OnStartHost();
@@ -944,6 +990,7 @@ namespace UnityEngine.Networking
       return client;
     }
 
+
     private NetworkClient ConnectLocalClient()
     {
       if (LogFilter.logDebug)
@@ -953,7 +1000,9 @@ namespace UnityEngine.Networking
       this.RegisterClientMessages(this.client);
       return this.client;
     }
+    #endregion
 
+    #region HLAPI methods from shutdown of Server, Client or Host
     /// <summary>
     /// 
     /// <para>
@@ -1000,21 +1049,32 @@ namespace UnityEngine.Networking
     public void StopClient()
     {
       this.OnStopClient();
+
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkManager StopClient");
+
       this.isNetworkActive = false;
+
       if (this.client != null)
       {
         this.client.Disconnect();
         this.client.Shutdown();
         this.client = (NetworkClient) null;
       }
+
       this.StopMatchMaker();
-      ClientScene.DestroyAllClientObjects();
+
+      ClientScene.DestroyAllClientObjects(); // cleans up all network objects on this clients game, not just this clients objects
+
       if (this.m_OfflineScene != string.Empty)
         this.ClientChangeScene(this.m_OfflineScene, false);
+
       NetworkClient.ShutdownAll();
     }
+
+    #endregion
+
+
 
     public virtual void ServerChangeScene(string newSceneName)
     {
@@ -1028,14 +1088,17 @@ namespace UnityEngine.Networking
       {
         if (LogFilter.logDebug)
           Debug.Log((object) ("ServerChangeScene " + newSceneName));
-        NetworkServer.SetAllClientsNotReady();
-        NetworkManager.networkSceneName = newSceneName;
-        NetworkManager.s_LoadingSceneAsync = Application.LoadLevelAsync(newSceneName);
+        // End sending state updates to all clients, clients ready themselves back up once new scene is loaded
+        NetworkServer.SetAllClientsNotReady(); 
+        NetworkManager.networkSceneName = newSceneName; // change current scene name
+        NetworkManager.s_LoadingSceneAsync = Application.LoadLevelAsync(newSceneName); // scene currently being loaded
+        // signal all clients about the scene change so callbacks are handled accordingly to change scene
         NetworkServer.SendToAll((short) 39, (MessageBase) new StringMessage(NetworkManager.networkSceneName));
         NetworkManager.s_StartPositionIndex = 0;
         NetworkManager.s_StartPositions.Clear();
       }
     }
+
 
     internal void ClientChangeScene(string newSceneName, bool forceReload)
     {
@@ -1056,6 +1119,7 @@ namespace UnityEngine.Networking
       }
     }
 
+    // used in Update to complete loading of a scene 
     private void FinishLoadScene()
     {
       if (this.client == null)
@@ -1075,29 +1139,39 @@ namespace UnityEngine.Networking
       }
       else if (LogFilter.logDev)
         Debug.Log((object) "FinishLoadScene client is STILL null");
+
       if (NetworkServer.active)
       {
         NetworkServer.SpawnObjects();
         this.OnServerSceneChanged(NetworkManager.networkSceneName);
       }
+
       if (!NetworkClient.active || NetworkServer.active)
         ;
+
       if (!NetworkClient.active)
         return;
+
       this.RegisterClientMessages(this.client);
       this.OnClientSceneChanged(this.client.connection);
     }
 
+
     private void Update()
     {
+      // if not loading a scene or has not finished loading a scene then just return
       if (NetworkManager.s_LoadingSceneAsync == null || !NetworkManager.s_LoadingSceneAsync.isDone)
         return;
+
       if (LogFilter.logDebug)
         Debug.Log((object) ("ClientChangeScene done readyCon:" + (object) NetworkManager.s_ClientReadyConnection));
+
       this.FinishLoadScene();
+
       NetworkManager.s_LoadingSceneAsync.allowSceneActivation = true;
       NetworkManager.s_LoadingSceneAsync = (AsyncOperation) null;
     }
+
 
     private void OnDestroy()
     {
@@ -1136,11 +1210,18 @@ namespace UnityEngine.Networking
       NetworkManager.s_StartPositions.Remove(start);
     }
 
+
+
+    #region Server message handlers for the messages registered for. These result in calling the api functions
+
+    // new client has connected to server
     internal void OnServerConnectInternal(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkManager:OnServerConnectInternal");
+
       netMsg.conn.SetMaxDelay(this.m_MaxDelay);
+
       if (NetworkManager.networkSceneName != string.Empty && NetworkManager.networkSceneName != this.m_OfflineScene)
       {
         StringMessage stringMessage = new StringMessage(NetworkManager.networkSceneName);
@@ -1149,6 +1230,7 @@ namespace UnityEngine.Networking
       this.OnServerConnect(netMsg.conn);
     }
 
+    // a client has disconnected from server
     internal void OnServerDisconnectInternal(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
@@ -1156,6 +1238,7 @@ namespace UnityEngine.Networking
       this.OnServerDisconnect(netMsg.conn);
     }
 
+    // when a client is ready
     internal void OnServerReadyMessageInternal(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
@@ -1189,6 +1272,8 @@ namespace UnityEngine.Networking
       netMsg.ReadMessage<ErrorMessage>(NetworkManager.s_ErrorMessage);
       this.OnServerError(netMsg.conn, NetworkManager.s_ErrorMessage.errorCode);
     }
+    #endregion
+
 
     internal void OnClientConnectInternal(NetworkMessage netMsg)
     {

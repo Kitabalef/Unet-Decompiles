@@ -441,14 +441,17 @@ namespace UnityEngine.Networking
     {
       if (LogFilter.logDev)
         Debug.Log((object) ("Server.SendToAll msgType:" + (object) msgType));
+
       ConnectionArray connectionArray = NetworkServer.instance.m_Connections;
       bool flag = true;
+
       for (int localIndex = connectionArray.LocalIndex; localIndex < connectionArray.Count; ++localIndex)
       {
         NetworkConnection networkConnection = connectionArray.Get(localIndex);
         if (networkConnection != null)
           flag &= networkConnection.Send(msgType, msg);
       }
+
       return flag;
     }
 
