@@ -315,16 +315,20 @@ namespace UnityEngine.Networking
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected static void RegisterCommandDelegate(System.Type invokeClass, int cmdHash, NetworkBehaviour.CmdDelegate func)
     {
+      // check if the command is already registered
       if (NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return;
+
       NetworkBehaviour.s_CmdHandlerDelegates[cmdHash] = new NetworkBehaviour.Invoker()
       {
         invokeType = NetworkBehaviour.UNetInvokeType.Command,
         invokeClass = invokeClass,
         invokeFunction = func
       };
+
       if (!LogFilter.logDev)
         return;
+
       object[] objArray = new object[4];
       int index1 = 0;
       string str1 = "RegisterCommandDelegate hash:";
@@ -347,14 +351,19 @@ namespace UnityEngine.Networking
     {
       if (NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return;
+
       NetworkBehaviour.s_CmdHandlerDelegates[cmdHash] = new NetworkBehaviour.Invoker()
       {
         invokeType = NetworkBehaviour.UNetInvokeType.ClientRpc,
         invokeClass = invokeClass,
         invokeFunction = func
       };
+
+
       if (!LogFilter.logDev)
         return;
+
+
       object[] objArray = new object[4];
       int index1 = 0;
       string str1 = "RegisterRpcDelegate hash:";
@@ -377,14 +386,19 @@ namespace UnityEngine.Networking
     {
       if (NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return;
+
       NetworkBehaviour.s_CmdHandlerDelegates[cmdHash] = new NetworkBehaviour.Invoker()
       {
         invokeType = NetworkBehaviour.UNetInvokeType.SyncEvent,
         invokeClass = invokeClass,
         invokeFunction = func
       };
+
+
       if (!LogFilter.logDev)
         return;
+
+
       object[] objArray = new object[4];
       int index1 = 0;
       string str1 = "RegisterEventDelegate hash:";
@@ -407,12 +421,16 @@ namespace UnityEngine.Networking
     {
       if (NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return;
+
+
       NetworkBehaviour.s_CmdHandlerDelegates[cmdHash] = new NetworkBehaviour.Invoker()
       {
         invokeType = NetworkBehaviour.UNetInvokeType.SyncList,
         invokeClass = invokeClass,
         invokeFunction = func
       };
+
+
       if (!LogFilter.logDev)
         return;
       object[] objArray = new object[4];
@@ -436,17 +454,20 @@ namespace UnityEngine.Networking
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return (string) null;
+
       return NetworkBehaviour.s_CmdHandlerDelegates[cmdHash].DebugString();
     }
 
     internal static void DumpInvokers()
     {
       Debug.Log((object) ("DumpInvokers size:" + (object) NetworkBehaviour.s_CmdHandlerDelegates.Count));
+
       using (Dictionary<int, NetworkBehaviour.Invoker>.Enumerator enumerator = NetworkBehaviour.s_CmdHandlerDelegates.GetEnumerator())
       {
         while (enumerator.MoveNext())
         {
           KeyValuePair<int, NetworkBehaviour.Invoker> current = enumerator.Current;
+
           object[] objArray = new object[8];
           int index1 = 0;
           string str1 = "  Invoker:";
@@ -488,9 +509,12 @@ namespace UnityEngine.Networking
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return false;
+
       NetworkBehaviour.Invoker invoker = NetworkBehaviour.s_CmdHandlerDelegates[cmdHash];
+
       if (invoker.invokeType != NetworkBehaviour.UNetInvokeType.Command)
         return false;
+
       if (this.GetType() != invoker.invokeClass && !this.GetType().IsSubclassOf(invoker.invokeClass))
       {
         string[] strArray = new string[5];
@@ -542,10 +566,14 @@ namespace UnityEngine.Networking
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return false;
+
       NetworkBehaviour.Invoker invoker = NetworkBehaviour.s_CmdHandlerDelegates[cmdHash];
+
       if (invoker.invokeType != NetworkBehaviour.UNetInvokeType.SyncList || this.GetType() != invoker.invokeClass)
         return false;
+
       invoker.invokeFunction(this, reader);
+
       return true;
     }
 
@@ -553,7 +581,9 @@ namespace UnityEngine.Networking
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return cmdHash.ToString();
+
       NetworkBehaviour.Invoker invoker = NetworkBehaviour.s_CmdHandlerDelegates[cmdHash];
+
       return invoker.invokeType.ToString() + ":" + invoker.invokeFunction.Method.Name;
     }
 
@@ -561,9 +591,12 @@ namespace UnityEngine.Networking
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
         return cmdHash.ToString();
+
       string str = NetworkBehaviour.s_CmdHandlerDelegates[cmdHash].invokeFunction.Method.Name;
+
       if (str.IndexOf(prefix) > -1)
         str = str.Substring(prefix.Length);
+
       return str;
     }
 
@@ -591,21 +624,28 @@ namespace UnityEngine.Networking
     protected bool SetSyncVarGameObject(GameObject newGameObject, ref GameObject gameObjectField, uint dirtyBit, ref NetworkInstanceId netIdField)
     {
       NetworkInstanceId networkInstanceId1 = new NetworkInstanceId();
+
       if ((UnityEngine.Object) newGameObject != (UnityEngine.Object) null)
       {
         NetworkIdentity component = newGameObject.GetComponent<NetworkIdentity>();
         if ((UnityEngine.Object) component != (UnityEngine.Object) null)
         {
           networkInstanceId1 = component.netId;
+
           if (networkInstanceId1.IsEmpty() && LogFilter.logWarn)
             Debug.LogWarning((object) ("SetSyncVarGameObject GameObject " + (object) newGameObject + " has a zero netId. Maybe it is not spawned yet?"));
         }
       }
+
+
       NetworkInstanceId networkInstanceId2 = new NetworkInstanceId();
+
       if ((UnityEngine.Object) gameObjectField != (UnityEngine.Object) null)
         networkInstanceId2 = gameObjectField.GetComponent<NetworkIdentity>().netId;
+
       if (!(networkInstanceId1 != networkInstanceId2))
         return false;
+
       if (LogFilter.logDev)
       {
         object[] objArray = new object[8];
@@ -649,6 +689,7 @@ namespace UnityEngine.Networking
     {
       if (value.Equals((object) fieldValue))
         return false;
+
       if (LogFilter.logDev)
       {
         object[] objArray = new object[8];
@@ -681,6 +722,7 @@ namespace UnityEngine.Networking
         objArray[index8] = (object) local3;
         Debug.Log((object) string.Concat(objArray));
       }
+
       this.SetDirtyBit(dirtyBit);
       fieldValue = value;
       return true;
@@ -815,7 +857,7 @@ namespace UnityEngine.Networking
     /// <summary>
     /// 
     /// <para>
-    /// This is invoked on behaviours that haev authority, based on context and the LocalPlayerAuthority value on the NetworkIdentity.
+    /// This is invoked on behaviours that have authority, based on context and the LocalPlayerAuthority value on the NetworkIdentity.
     /// </para>
     /// 
     /// </summary>

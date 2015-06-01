@@ -650,18 +650,22 @@ namespace UnityEngine.Networking
     private void Awake()
     {
       LogFilter.currentLogLevel = (int) this.m_LogLevel;
+
       if (this.m_DontDestroyOnLoad)
       {
-          // Reinforce the singelton idea here by deleting a copy if made
+          // Reinforce the singleton idea in awake by deleting a copy if made
         if ((UnityEngine.Object) NetworkManager.singleton != (UnityEngine.Object) null)
         {
           if (LogFilter.logDebug)
             Debug.Log((object) "NetworkManager created but singleton already exists");
+
           UnityEngine.Object.Destroy((UnityEngine.Object) this.gameObject);
           return;
         }
+
         if (LogFilter.logDev)
           Debug.Log((object) "NetworkManager created singleton (DontDestroyOnLoad)");
+
         NetworkManager.singleton = this; // set the singleton field for the network game
         UnityEngine.Object.DontDestroyOnLoad((UnityEngine.Object) this.gameObject); // persist the same NetManager/singleton object between scenes
       }
@@ -669,6 +673,7 @@ namespace UnityEngine.Networking
       {
         if (LogFilter.logDev)
           Debug.Log((object) "NetworkManager created singleton (ForScene)");
+
         NetworkManager.singleton = this;
       }
 

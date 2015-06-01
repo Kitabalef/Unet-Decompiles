@@ -584,7 +584,7 @@ namespace UnityEngine.Networking
     /// <summary>
     /// 
     /// <para>
-    /// This fills out the size header of a message begun with StartMessage(), so that it can be send using Send() functions.
+    /// This fills out the size header of a message begun with StartMessage(), so that it can be sent using Send() functions.
     /// </para>
     /// 
     /// </summary>
