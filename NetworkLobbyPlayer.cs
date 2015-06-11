@@ -79,6 +79,7 @@ namespace UnityEngine.Networking
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
       if ((bool) ((Object) networkLobbyManager))
       {
+
         networkLobbyManager.lobbySlots[(int) this.m_Slot] = this;
         this.m_ReadyToBegin = false;
         this.OnClientEnterLobby();
@@ -98,9 +99,13 @@ namespace UnityEngine.Networking
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyPlayer SendReadyToBeginMessage");
+
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
+
       if (!(bool) ((Object) networkLobbyManager))
         return;
+      
+      // Send the players controller id to server to signal this player as ready
       IntegerMessage integerMessage = new IntegerMessage((int) this.playerControllerId);
       networkLobbyManager.client.Send((short) 43, (MessageBase) integerMessage);
     }
@@ -116,18 +121,25 @@ namespace UnityEngine.Networking
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyPlayer SendSceneLoadedMessage");
+
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
+
       if (!(bool) ((Object) networkLobbyManager))
         return;
+
       IntegerMessage integerMessage = new IntegerMessage((int) this.playerControllerId);
       networkLobbyManager.client.Send((short) 44, (MessageBase) integerMessage);
     }
 
+
+
     private void OnLevelWasLoaded()
     {
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
+
       if ((bool) ((Object) networkLobbyManager) && Application.loadedLevelName == networkLobbyManager.lobbyScene || !this.isLocalPlayer)
         return;
+
       this.SendSceneLoadedMessage();
     }
 
@@ -142,29 +154,21 @@ namespace UnityEngine.Networking
     {
       if (!this.isLocalPlayer || this.m_ReadyToBegin)
         return;
+
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyPlayer RemovePlayer");
+
       ClientScene.RemovePlayer(this.GetComponent<NetworkIdentity>().playerControllerId);
     }
 
-    /// <summary>
-    /// 
-    /// <para>
-    /// This is a hook that is invoked on all player objects when entering the lobby.
-    /// </para>
-    /// 
-    /// </summary>
+ 
+    // This is a hook that is invoked on all player objects when entering the lobby.
     public virtual void OnClientEnterLobby()
     {
     }
 
-    /// <summary>
-    /// 
-    /// <para>
-    /// This is a hook that is invoked on all player objects when exiting the lobby.
-    /// </para>
-    /// 
-    /// </summary>
+  
+    // This is a hook that is invoked on all player objects when exiting the lobby.
     public virtual void OnClientExitLobby()
     {
     }
@@ -172,6 +176,7 @@ namespace UnityEngine.Networking
     public virtual void OnClientReady(bool readyState)
     {
     }
+
 
     public override bool OnSerialize(NetworkWriter writer, bool initialState)
     {
@@ -181,6 +186,8 @@ namespace UnityEngine.Networking
       return true;
     }
 
+    // the server sends a message to clients after it processes a ready to begin message sent from a client
+    // server is responsible for assigning a slot and setting the player ready state
     public override void OnDeserialize(NetworkReader reader, bool initialState)
     {
       if ((int) reader.ReadPackedUInt32() == 0)
@@ -189,13 +196,16 @@ namespace UnityEngine.Networking
       this.m_ReadyToBegin = reader.ReadBoolean();
     }
 
+
     private void OnGUI()
     {
       if (!this.ShowLobbyGUI)
         return;
+
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
       if ((bool) ((Object) networkLobbyManager) && (!networkLobbyManager.showLobbyGUI || Application.loadedLevelName != networkLobbyManager.lobbyScene))
         return;
+
       Rect position = new Rect((float) (100 + (int) this.m_Slot * 100), 200f, 90f, 20f);
       if (this.isLocalPlayer)
       {

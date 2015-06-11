@@ -183,12 +183,15 @@ namespace UnityEngine.Networking
       }
     }
 
+
     private void OnValidate()
     {
       if (this.maxPlayersPerConnection <= this.maxPlayers)
         return;
+
       this.maxPlayersPerConnection = this.maxPlayers;
     }
+
 
     private byte FindSlot()
     {
@@ -197,13 +200,18 @@ namespace UnityEngine.Networking
         if ((UnityEngine.Object) this.lobbySlots[(int) index] == (UnityEngine.Object) null)
           return index;
       }
+
       return byte.MaxValue;
     }
 
+
     private void SceneLoadedForPlayer(NetworkConnection conn, GameObject lobbyPlayerGameObject)
     {
+
+      // if the the gameobject that is supposed to be used for game play doesnt have a LobbyPlayer attached return
       if ((UnityEngine.Object) lobbyPlayerGameObject.GetComponent<NetworkLobbyPlayer>() == (UnityEngine.Object) null)
         return;
+
       if (LogFilter.logDebug)
       {
         object[] objArray = new object[4];
@@ -221,6 +229,8 @@ namespace UnityEngine.Networking
         objArray[index4] = (object) networkConnection;
         Debug.Log((object) string.Concat(objArray));
       }
+
+
       if (Application.loadedLevelName == this.m_LobbyScene)
       {
         NetworkLobbyManager.PendingPlayer pendingPlayer;
@@ -228,23 +238,33 @@ namespace UnityEngine.Networking
         pendingPlayer.lobbyPlayer = lobbyPlayerGameObject;
         this.pendingPlayers.Add(pendingPlayer);
       }
-      else
+      else // if we are not in the lobby scene then we are setting up for game scene
       {
         short playerControllerId = lobbyPlayerGameObject.GetComponent<NetworkIdentity>().playerControllerId;
         GameObject gameObject = this.OnLobbyServerCreateGamePlayer(conn, playerControllerId);
+
         if ((UnityEngine.Object) gameObject == (UnityEngine.Object) null)
         {
           Transform startPosition = this.GetStartPosition();
           gameObject = !((UnityEngine.Object) startPosition != (UnityEngine.Object) null) ? (GameObject) UnityEngine.Object.Instantiate((UnityEngine.Object) this.gamePlayerPrefab, Vector3.zero, Quaternion.identity) : (GameObject) UnityEngine.Object.Instantiate((UnityEngine.Object) this.gamePlayerPrefab, startPosition.position, startPosition.rotation);
         }
+
+
+        // OnLobbyServerSceneLoadedForPlayer is an empty server virtual method we can override to add lobby player state/data to a game player object
+        // once loaded into the game scene, if it returns false we dont proceed to ReplacePlayerForConnection
         if (!this.OnLobbyServerSceneLoadedForPlayer(lobbyPlayerGameObject, gameObject))
           return;
+
         NetworkServer.ReplacePlayerForConnection(conn, gameObject, playerControllerId);
+
       }
     }
 
+
+
     private bool CheckConnnectionIsReadyToBegin(NetworkConnection conn)
     {
+
       using (List<PlayerController>.Enumerator enumerator = conn.playerControllers.GetEnumerator())
       {
         while (enumerator.MoveNext())
@@ -254,6 +274,7 @@ namespace UnityEngine.Networking
             return false;
         }
       }
+
       return true;
     }
 
@@ -266,8 +287,11 @@ namespace UnityEngine.Networking
     /// </summary>
     public void CheckReadyToBegin()
     {
+
+
       if (Application.loadedLevelName != this.m_LobbyScene)
         return;
+
       using (List<NetworkConnection>.Enumerator enumerator = NetworkServer.connections.GetEnumerator())
       {
         while (enumerator.MoveNext())
@@ -277,6 +301,8 @@ namespace UnityEngine.Networking
             return;
         }
       }
+
+    // check also the ready state of the local client/s
       using (List<NetworkConnection>.Enumerator enumerator = NetworkServer.localConnections.GetEnumerator())
       {
         while (enumerator.MoveNext())
@@ -286,6 +312,7 @@ namespace UnityEngine.Networking
             return;
         }
       }
+       // if all are ready then there is no more pending, clear out the pending list and load the game scene for play
       this.pendingPlayers.Clear();
       this.ServerChangeScene(this.m_PlayScene);
     }
@@ -305,6 +332,8 @@ namespace UnityEngine.Networking
         this.ServerChangeScene(this.m_LobbyScene);
     }
 
+
+
     private void CallOnClientEnterLobby()
     {
       this.OnLobbyClientEnter();
@@ -312,11 +341,15 @@ namespace UnityEngine.Networking
       {
         if (!((UnityEngine.Object) networkLobbyPlayer == (UnityEngine.Object) null))
         {
+            // set each player as not ready
           networkLobbyPlayer.readyToBegin = false;
+            // then call into the virtual hook method of each lobby player for any implementation there
           networkLobbyPlayer.OnClientEnterLobby();
         }
       }
     }
+
+
 
     private void CallOnClientExitLobby()
     {
@@ -324,6 +357,7 @@ namespace UnityEngine.Networking
       foreach (NetworkLobbyPlayer networkLobbyPlayer in this.lobbySlots)
       {
         if (!((UnityEngine.Object) networkLobbyPlayer == (UnityEngine.Object) null))
+            // call into the virtual hook that may be implemented for when a lobby player leaves
           networkLobbyPlayer.OnClientExitLobby();
       }
     }
@@ -347,9 +381,12 @@ namespace UnityEngine.Networking
     {
       if (this.client == null || !this.client.isConnected)
         return false;
+
       this.client.Send((short) 46, (MessageBase) new EmptyMessage());
       return true;
     }
+
+
 
     public override void OnServerConnect(NetworkConnection conn)
     {
@@ -372,10 +409,12 @@ namespace UnityEngine.Networking
       this.OnLobbyServerDisconnect(conn);
     }
 
+
     public override void OnServerAddPlayer(NetworkConnection conn, short playerControllerId)
     {
       if (Application.loadedLevelName != this.m_LobbyScene)
         return;
+
       int num = 0;
       using (List<PlayerController>.Enumerator enumerator = conn.playerControllers.GetEnumerator())
       {
@@ -385,6 +424,7 @@ namespace UnityEngine.Networking
             ++num;
         }
       }
+
       if (num >= this.maxPlayersPerConnection)
       {
         if (LogFilter.logWarn)
@@ -415,6 +455,7 @@ namespace UnityEngine.Networking
       }
     }
 
+
     public override void OnServerRemovePlayer(NetworkConnection conn, PlayerController player)
     {
       short playerControllerId = player.playerControllerId;
@@ -432,6 +473,7 @@ namespace UnityEngine.Networking
       }
       this.OnLobbyServerPlayerRemoved(conn, playerControllerId);
     }
+
 
     public override void ServerChangeScene(string sceneName)
     {
@@ -453,6 +495,7 @@ namespace UnityEngine.Networking
       base.ServerChangeScene(sceneName);
     }
 
+
     public override void OnServerSceneChanged(string sceneName)
     {
       if (sceneName != this.m_LobbyScene)
@@ -470,12 +513,16 @@ namespace UnityEngine.Networking
       this.OnLobbyServerSceneChanged(sceneName);
     }
 
+
+    // callback registered for when a client send the ready to begin message to server, once all are ready the game scene loads
     private void OnServerReadyToBeginMessage(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyManager OnServerReadyToBeginMessage");
+
       netMsg.ReadMessage<IntegerMessage>(NetworkLobbyManager.s_ReadyToBeginMessage);
       PlayerController playerController;
+
       if (!netMsg.conn.GetPlayerController((short) NetworkLobbyManager.s_ReadyToBeginMessage.value, out playerController))
       {
         if (!LogFilter.logError)
@@ -486,21 +533,27 @@ namespace UnityEngine.Networking
       {
         NetworkLobbyPlayer component = playerController.gameObject.GetComponent<NetworkLobbyPlayer>();
         component.readyToBegin = true;
+        // notify each player of the current ready state of the lobby, including the player who sent the ready message
+        // server should be responsible for the set the ready value of each client after ready mesage has been received
         NetworkServer.SendToReady((GameObject) null, (short) 43, (MessageBase) new LobbyReadyToBeginMessage()
         {
           slotId = component.slot,
           readyState = true
         });
+
         this.CheckReadyToBegin();
       }
     }
+
 
     private void OnServerSceneLoadedMessage(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyManager OnSceneLoadedMessage");
+
       netMsg.ReadMessage<IntegerMessage>(NetworkLobbyManager.s_SceneLoadedMessage);
       PlayerController playerController;
+
       if (!netMsg.conn.GetPlayerController((short) NetworkLobbyManager.s_SceneLoadedMessage.value, out playerController))
       {
         if (!LogFilter.logError)
@@ -511,22 +564,27 @@ namespace UnityEngine.Networking
         this.SceneLoadedForPlayer(netMsg.conn, playerController.gameObject);
     }
 
+
     private void OnServerReturnToLobbyMessage(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkLobbyManager OnServerReturnToLobbyMessage");
+
       this.ServerReturnToLobby();
     }
+
 
     public override void OnStartServer()
     {
       if (this.lobbySlots.Length == 0)
         this.lobbySlots = new NetworkLobbyPlayer[this.maxPlayers];
+
       NetworkServer.RegisterHandler((short) 43, new NetworkMessageDelegate(this.OnServerReadyToBeginMessage));
       NetworkServer.RegisterHandler((short) 44, new NetworkMessageDelegate(this.OnServerSceneLoadedMessage));
       NetworkServer.RegisterHandler((short) 46, new NetworkMessageDelegate(this.OnServerReturnToLobbyMessage));
       this.OnLobbyStartServer();
     }
+
 
     public override void OnStartHost()
     {
@@ -538,10 +596,12 @@ namespace UnityEngine.Networking
       this.OnLobbyStopHost();
     }
 
+
     public override void OnStartClient(NetworkClient client)
     {
       if (this.lobbySlots.Length == 0)
         this.lobbySlots = new NetworkLobbyPlayer[this.maxPlayers];
+
       if ((UnityEngine.Object) this.m_LobbyPlayerPrefab == (UnityEngine.Object) null || (UnityEngine.Object) this.m_LobbyPlayerPrefab.gameObject == (UnityEngine.Object) null)
       {
         if (LogFilter.logError)
@@ -549,6 +609,7 @@ namespace UnityEngine.Networking
       }
       else
         ClientScene.RegisterPrefab(this.m_LobbyPlayerPrefab.gameObject);
+
       if ((UnityEngine.Object) this.m_GamePlayerPrefab == (UnityEngine.Object) null)
       {
         if (LogFilter.logError)
@@ -556,10 +617,12 @@ namespace UnityEngine.Networking
       }
       else
         ClientScene.RegisterPrefab(this.m_GamePlayerPrefab);
+
       client.RegisterHandler((short) 43, new NetworkMessageDelegate(this.OnClientReadyToBegin));
       client.RegisterHandler((short) 45, new NetworkMessageDelegate(this.OnClientAddPlayerFailedMessage));
       this.OnLobbyStartClient(client);
     }
+
 
     public override void OnClientConnect(NetworkConnection conn)
     {
@@ -589,6 +652,7 @@ namespace UnityEngine.Networking
       }
       else
         this.CallOnClientExitLobby();
+
       base.OnClientSceneChanged(conn);
       this.OnLobbyClientSceneChanged(conn);
     }
@@ -618,6 +682,7 @@ namespace UnityEngine.Networking
         }
       }
     }
+
 
     private void OnClientAddPlayerFailedMessage(NetworkMessage netMsg)
     {

@@ -47,6 +47,7 @@ namespace UnityEngine.Networking.Match
     public NetworkMatch()
     {
       ulong result;
+
       if (!ulong.TryParse(PlayerPrefs.GetString("CloudNetworkingId"), out result))
         UnityEngine.Debug.Log((object) "Failed to read the ID for the match maker, please set the Cloud Project ID string in the Player Settings (see https://unet.cloud.unity3d.com).");
       else

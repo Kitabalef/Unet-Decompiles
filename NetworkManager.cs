@@ -67,7 +67,8 @@ namespace UnityEngine.Networking
     [SerializeField]
     private string m_MatchHost = "mm.unet.unity3d.com";
     [SerializeField]
-    private int m_MatchPort = 443;
+   
+      private int m_MatchPort = 443;
     /// <summary>
     /// 
     /// <para>
@@ -744,14 +745,19 @@ namespace UnityEngine.Networking
       return this.StartServer((MatchInfo) null);
     }
 
+
+
     public bool StartServer(MatchInfo info)
     {
       return this.StartServer(info, (ConnectionConfig) null, -1);
     }
 
+
+
     private bool StartServer(MatchInfo info, ConnectionConfig config, int maxConnections)
     {
       this.OnStartServer();
+
       if (this.m_RunInBackground)
         Application.runInBackground = true;
 
@@ -951,11 +957,15 @@ namespace UnityEngine.Networking
     #region StartHost() overloads
     public virtual NetworkClient StartHost(ConnectionConfig config, int maxConnections)
     {
-      this.OnStartHost();
-      if (!this.StartServer(config, maxConnections))
+      this.OnStartHost(); // this method is empty, just to be used to hook in 
+
+      if (!this.StartServer(config, maxConnections)) // start a server for the game and local client to connect to
         return (NetworkClient) null;
+
       NetworkClient client = this.ConnectLocalClient();
-      this.OnStartClient(client);
+      //empty method, just to hook in and do anything with the NetworkClient before it is returned to the caller of StartHost
+      this.OnStartClient(client); 
+
       return client;
     }
 
@@ -963,8 +973,10 @@ namespace UnityEngine.Networking
     {
       this.OnStartHost();
       this.matchInfo = info;
+
       if (!this.StartServer(info))
         return (NetworkClient) null;
+
       NetworkClient client = this.ConnectLocalClient();
       this.OnStartClient(client);
       return client;
@@ -987,11 +999,15 @@ namespace UnityEngine.Networking
     /// </returns>
     public virtual NetworkClient StartHost()
     {
-      this.OnStartHost();
+      this.OnStartHost(); // empty method, made to hook in to method chain for you own uses
+
+      // start a server for the game and local client to connect to
       if (!this.StartServer())
         return (NetworkClient) null;
+
       NetworkClient client = this.ConnectLocalClient();
-      this.OnStartClient(client);
+      this.OnStartClient(client); // empty method, override if needed to add to client set up
+
       return client;
     }
 
@@ -1000,14 +1016,16 @@ namespace UnityEngine.Networking
     {
       if (LogFilter.logDebug)
         Debug.Log((object) ("NetworkManager StartHost port:" + (object) this.m_NetworkPort));
+
       this.m_NetworkAddress = "localhost";
       this.client = ClientScene.ConnectLocalServer();
       this.RegisterClientMessages(this.client);
+
       return this.client;
     }
     #endregion
 
-    #region HLAPI methods from shutdown of Server, Client or Host
+#region HLAPI methods for shutdown of Server, Client or Host
     /// <summary>
     /// 
     /// <para>
@@ -1034,13 +1052,17 @@ namespace UnityEngine.Networking
       if (!NetworkServer.active)
         return;
       this.OnStopServer();
+
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkManager StopServer");
+
       this.isNetworkActive = false;
       NetworkServer.Shutdown();
       this.StopMatchMaker();
+
       if (!(this.m_OfflineScene != string.Empty))
         return;
+
       this.ServerChangeScene(this.m_OfflineScene);
     }
 
@@ -1077,7 +1099,7 @@ namespace UnityEngine.Networking
       NetworkClient.ShutdownAll();
     }
 
-    #endregion
+    #endregion    
 
 
 
@@ -1562,17 +1584,15 @@ namespace UnityEngine.Networking
       ClientScene.AddPlayer((short) 0);
     }
 
-    /// <summary>
-    /// 
-    /// <para>
+
     /// This creates a UMatch matchmaker for the NetworkManager.
-    /// </para>
-    /// 
-    /// </summary>
+    //  It does not actually make a request to the match maker service, it just sets up the Network Match property for this NetManager
+    //  then the Create/Join/List methods of NetworkMatch can be called on the managers singleton 
     public void StartMatchMaker()
     {
       if (LogFilter.logDebug)
         Debug.Log((object) "NetworkManager StartMatchMaker");
+
       this.SetMatchHost(this.m_MatchHost, this.m_MatchPort, true);
     }
 
@@ -1604,18 +1624,36 @@ namespace UnityEngine.Networking
     /// <param name="newHost">Hostname of matchmaker service.</param><param name="port">Port of matchmaker service.</param><param name="https">Protocol used by matchmaker service.</param>
     public void SetMatchHost(string newHost, int port, bool https)
     {
+      
+      // this should populate the NetworkMatch singleton property, attaching a NetworkMatch component(not publicly available to add yourself)
+      // to this NetworkManager.. the NetworkManager public matchMaker property is then set by it. This is how you interact/reference the match making service
+      // through the NetManager now, like the public manager client property for example after it is set up
+      // you can then call the Join/Create/List NetworkMatch functions on the managers matchMaker singleton
       if ((UnityEngine.Object) this.matchMaker == (UnityEngine.Object) null)
         this.matchMaker = this.gameObject.AddComponent<NetworkMatch>();
+
+     // this is currently set to the url for the Unity match making service, not sure when/why it would be localhost
+     // maybe something in the future
       if (newHost == "localhost" || newHost == "127.0.0.1")
         newHost = Environment.MachineName;
-      string str1 = "http://";
-      if (https)
-        str1 = "https://";
+
+  
       if (LogFilter.logDebug)
         Debug.Log((object) ("SetMatchHost:" + newHost));
+
+      // both are currently just set to what they already were, default unity match making service url/port
       this.m_MatchHost = newHost;
       this.m_MatchPort = port;
+
+      // Not sure what the rest of this method is for.. why create a copy, set its uri, and do nothing with it?
+      #region
       NetworkMatch networkMatch = this.matchMaker;
+
+      string str1 = "http://";
+      if (https)
+          str1 = "https://";
+
+     // piece together the uri for the match maker service
       object[] objArray = new object[4];
       int index1 = 0;
       string str2 = str1;
@@ -1630,8 +1668,10 @@ namespace UnityEngine.Networking
       // ISSUE: variable of a boxed type
       __Boxed<int> local = (ValueType) this.m_MatchPort;
       objArray[index4] = (object) local;
+
       Uri uri = new Uri(string.Concat(objArray));
       networkMatch.baseUri = uri;
+      #endregion
     }
 
     /// <summary>

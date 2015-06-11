@@ -67,7 +67,7 @@ namespace UnityEngine.Networking.Match
     /// <summary>
     /// 
     /// <para>
-    /// Flag to say if the math uses a relay server.
+    /// Flag to say if the match uses a relay server.
     /// </para>
     /// 
     /// </summary>

@@ -785,6 +785,8 @@ namespace UnityEngine.Networking
           this.SerializeModeCharacterController(this.m_LocalTransformWriter);
           break;
       }
+
+
       if ((UnityEngine.Object) this.m_RigidBody3D != (UnityEngine.Object) null)
       {
         this.m_PrevPosition = this.m_RigidBody3D.position;
@@ -804,6 +806,8 @@ namespace UnityEngine.Networking
       NetworkClient.allClients[0].SendWriter(this.m_LocalTransformWriter, this.GetNetworkChannel());
     }
 
+    // This is used as the registered callback on the NetworkManager for handling transform info being passed for each 
+    // gameobject with the NetworkTransform on it
     public static void HandleTransform(NetworkMessage netMsg)
     {
       NetworkInstanceId netId = netMsg.reader.ReadNetworkId();

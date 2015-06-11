@@ -199,6 +199,7 @@ namespace UnityEngine.Networking
       NetworkClient.AddClient(this);
     }
 
+
     public bool Configure(ConnectionConfig config, int maxConnections)
     {
       return this.Configure(new HostTopology(config, maxConnections));
@@ -278,6 +279,9 @@ namespace UnityEngine.Networking
       }
     }
 
+
+
+
     public void Connect(EndPoint secureTunnelEndPoint)
     {
       this.PrepareForConnect();
@@ -330,6 +334,8 @@ namespace UnityEngine.Networking
       }
     }
 
+
+
     private void PrepareForConnect()
     {
       NetworkClient.SetActive(true);
@@ -371,6 +377,9 @@ namespace UnityEngine.Networking
       else
         this.m_ClientId = NetworkTransport.AddHost(this.m_hostTopology, 0);
     }
+
+
+
 
     internal static void GetHostAddressesCallback(IAsyncResult ar)
     {
@@ -423,6 +432,8 @@ namespace UnityEngine.Networking
       }
     }
 
+
+
     internal void ContinueConnect()
     {
       byte error;
@@ -455,6 +466,9 @@ namespace UnityEngine.Networking
       this.m_Connection = new NetworkConnection();
       this.m_Connection.Initialize(this.m_ServerIp, this.m_ClientId, this.m_ClientConnectionId, this.m_hostTopology);
     }
+
+
+
 
     private void ConnectWithRelay(MatchInfo info)
     {
@@ -668,6 +682,7 @@ namespace UnityEngine.Networking
                 this.m_MsgReader.SeekZero();
                 this.m_Connection.HandleMessage(this.m_MessageHandlers.GetHandlers(), this.m_MsgReader, receivedSize, channelId);
                 goto case 3;
+
               case NetworkEventType.ConnectEvent:
                 if (LogFilter.logDebug)
                   Debug.Log((object) "Client connected");
@@ -679,6 +694,7 @@ namespace UnityEngine.Networking
                 this.m_AsyncConnect = NetworkClient.ConnectState.Connected;
                 this.m_MessageHandlers.InvokeHandlerNoData((short) 32, this.m_Connection);
                 goto case 3;
+
               case NetworkEventType.DisconnectEvent:
                 if (LogFilter.logDebug)
                   Debug.Log((object) "Client disconnected");
@@ -688,6 +704,7 @@ namespace UnityEngine.Networking
                 ClientScene.HandleClientDisconnect(this.m_Connection);
                 this.m_MessageHandlers.InvokeHandlerNoData((short) 33, this.m_Connection);
                 goto case 3;
+
               case NetworkEventType.Nothing:
                 if (++num >= NetworkClient.MaxEventsPerFrame)
                 {
