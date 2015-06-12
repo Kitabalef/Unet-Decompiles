@@ -241,8 +241,11 @@ namespace UnityEngine.Networking
       else // if we are not in the lobby scene then we are setting up for game scene
       {
         short playerControllerId = lobbyPlayerGameObject.GetComponent<NetworkIdentity>().playerControllerId;
+
+        // docs say this virtual function enables you to change the lobby player
         GameObject gameObject = this.OnLobbyServerCreateGamePlayer(conn, playerControllerId);
 
+        // if we did not create a new player in the OnLobbyServerCreateGamePlayer it will return null
         if ((UnityEngine.Object) gameObject == (UnityEngine.Object) null)
         {
           Transform startPosition = this.GetStartPosition();
@@ -252,6 +255,7 @@ namespace UnityEngine.Networking
 
         // OnLobbyServerSceneLoadedForPlayer is an empty server virtual method we can override to add lobby player state/data to a game player object
         // once loaded into the game scene, if it returns false we dont proceed to ReplacePlayerForConnection
+        // default value is to return true
         if (!this.OnLobbyServerSceneLoadedForPlayer(lobbyPlayerGameObject, gameObject))
           return;
 
@@ -261,7 +265,8 @@ namespace UnityEngine.Networking
     }
 
 
-
+    // method for checking if a connection is ready, a connection can have more than one player associated with it, think split screen
+    // internal method used by the public api CheckReadyToBegin()
     private bool CheckConnnectionIsReadyToBegin(NetworkConnection conn)
     {
 
@@ -282,16 +287,16 @@ namespace UnityEngine.Networking
     /// 
     /// <para>
     /// CheckReadyToBegin checks all of the players in the lobby to see if their readyToBegin flag is set.
+    /// Called automatically in response to NetworkLobbyPlayer.SendReadyToBeginMessage()
     /// </para>
     /// 
     /// </summary>
     public void CheckReadyToBegin()
     {
-
-
-      if (Application.loadedLevelName != this.m_LobbyScene)
+      if (Application.loadedLevelName != this.m_LobbyScene) // make sure we are still in the lobby before anything
         return;
 
+     // iterate over each connection the server currently holds
       using (List<NetworkConnection>.Enumerator enumerator = NetworkServer.connections.GetEnumerator())
       {
         while (enumerator.MoveNext())
@@ -336,14 +341,15 @@ namespace UnityEngine.Networking
 
     private void CallOnClientEnterLobby()
     {
-      this.OnLobbyClientEnter();
+      this.OnLobbyClientEnter(); // Call to virtual method to run any server hooks for when a player enters the lobby
+
       foreach (NetworkLobbyPlayer networkLobbyPlayer in this.lobbySlots)
       {
         if (!((UnityEngine.Object) networkLobbyPlayer == (UnityEngine.Object) null))
         {
             // set each player as not ready
           networkLobbyPlayer.readyToBegin = false;
-            // then call into the virtual hook method of each lobby player for any implementation there
+            // then call into the virtual client hook method of each lobby player for any implementation there
           networkLobbyPlayer.OnClientEnterLobby();
         }
       }
@@ -353,11 +359,12 @@ namespace UnityEngine.Networking
 
     private void CallOnClientExitLobby()
     {
-      this.OnLobbyClientExit();
+      this.OnLobbyClientExit(); // call to virtual hooks on server for when a player leaves the lobby
+
       foreach (NetworkLobbyPlayer networkLobbyPlayer in this.lobbySlots)
       {
         if (!((UnityEngine.Object) networkLobbyPlayer == (UnityEngine.Object) null))
-            // call into the virtual hook that may be implemented for when a lobby player leaves
+            // call into the virtual client hook that may be implemented for when a lobby player leaves
           networkLobbyPlayer.OnClientExitLobby();
       }
     }
@@ -377,7 +384,7 @@ namespace UnityEngine.Networking
     /// </para>
     /// 
     /// </returns>
-    public bool SendReturnToLobby()
+    public bool SendReturnToLobby() // I guess it uses its own client property to tell itself to switch back to lobby.. why would player have access
     {
       if (this.client == null || !this.client.isConnected)
         return false;
@@ -387,16 +394,16 @@ namespace UnityEngine.Networking
     }
 
 
-
+     // override when a new client connects to the server
     public override void OnServerConnect(NetworkConnection conn)
     {
       if (this.numPlayers >= this.maxPlayers)
         conn.Disconnect();
-      else if (Application.loadedLevelName != this.m_LobbyScene)
+      else if (Application.loadedLevelName != this.m_LobbyScene) // this will prevent players from joining after game is already started
       {
         conn.Disconnect();
       }
-      else
+      else // otherwise we continue the process
       {
         base.OnServerConnect(conn);
         this.OnLobbyServerConnect(conn);
@@ -415,6 +422,7 @@ namespace UnityEngine.Networking
       if (Application.loadedLevelName != this.m_LobbyScene)
         return;
 
+        // see how many players are playing from a connection
       int num = 0;
       using (List<PlayerController>.Enumerator enumerator = conn.playerControllers.GetEnumerator())
       {
@@ -425,6 +433,7 @@ namespace UnityEngine.Networking
         }
       }
 
+        // default value is one player per connection
       if (num >= this.maxPlayersPerConnection)
       {
         if (LogFilter.logWarn)
@@ -432,21 +441,23 @@ namespace UnityEngine.Networking
         EmptyMessage emptyMessage = new EmptyMessage();
         conn.Send((short) 45, (MessageBase) emptyMessage);
       }
-      else
+      else // if the connection meets the value set for maxPlayersPerConnection then attempt to fill a lobby slot with that player
       {
         byte slot = this.FindSlot();
-        if ((int) slot == (int) byte.MaxValue)
+        if ((int) slot == (int) byte.MaxValue) // then all lobby slots are full, no more room in game
         {
           if (LogFilter.logWarn)
             Debug.LogWarning((object) "NetworkLobbyManager no space for more players");
           EmptyMessage emptyMessage = new EmptyMessage();
           conn.Send((short) 45, (MessageBase) emptyMessage);
         }
-        else
+        else // set up the lobby player to be spawned into the lobby scene
         {
           GameObject player = this.OnLobbyServerCreateLobbyPlayer(conn, playerControllerId);
+
           if ((UnityEngine.Object) player == (UnityEngine.Object) null)
             player = (GameObject) UnityEngine.Object.Instantiate((UnityEngine.Object) this.lobbyPlayerPrefab.gameObject, Vector3.zero, Quaternion.identity);
+
           NetworkLobbyPlayer component = player.GetComponent<NetworkLobbyPlayer>();
           component.slot = slot;
           this.lobbySlots[(int) slot] = component;
@@ -546,6 +557,7 @@ namespace UnityEngine.Networking
     }
 
 
+    // internal handler when server receives message that a player had loaded the game scene
     private void OnServerSceneLoadedMessage(NetworkMessage netMsg)
     {
       if (LogFilter.logDebug)
@@ -553,6 +565,7 @@ namespace UnityEngine.Networking
 
       netMsg.ReadMessage<IntegerMessage>(NetworkLobbyManager.s_SceneLoadedMessage);
       PlayerController playerController;
+
 
       if (!netMsg.conn.GetPlayerController((short) NetworkLobbyManager.s_SceneLoadedMessage.value, out playerController))
       {
@@ -928,9 +941,12 @@ namespace UnityEngine.Networking
     {
       if (!this.showLobbyGUI || Application.loadedLevelName != this.m_LobbyScene)
         return;
+
       GUI.Box(new Rect(90f, 180f, 500f, 150f), "Players:");
+        
       if (!NetworkClient.active || !GUI.Button(new Rect(100f, 300f, 120f, 20f), "Add Player"))
         return;
+
       this.TryToAddPlayer();
     }
 

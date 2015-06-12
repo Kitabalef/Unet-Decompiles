@@ -82,7 +82,7 @@ namespace UnityEngine.Networking
 
         networkLobbyManager.lobbySlots[(int) this.m_Slot] = this;
         this.m_ReadyToBegin = false;
-        this.OnClientEnterLobby();
+        this.OnClientEnterLobby(); // hook into client side setup when player is entering the lobby
       }
       else
         Debug.LogError((object) "No Lobby for LobbyPlayer");
@@ -152,7 +152,7 @@ namespace UnityEngine.Networking
     /// </summary>
     public void RemovePlayer()
     {
-      if (!this.isLocalPlayer || this.m_ReadyToBegin)
+      if (!this.isLocalPlayer || this.m_ReadyToBegin) // you have to be unready to be able to be removed
         return;
 
       if (LogFilter.logDebug)
@@ -196,20 +196,23 @@ namespace UnityEngine.Networking
       this.m_ReadyToBegin = reader.ReadBoolean();
     }
 
-
+    // The GUI shown in the old gui lobby example when ShowLobbyGUI is checked as true
     private void OnGUI()
     {
       if (!this.ShowLobbyGUI)
         return;
 
       NetworkLobbyManager networkLobbyManager = NetworkManager.singleton as NetworkLobbyManager;
+
       if ((bool) ((Object) networkLobbyManager) && (!networkLobbyManager.showLobbyGUI || Application.loadedLevelName != networkLobbyManager.lobbyScene))
         return;
 
       Rect position = new Rect((float) (100 + (int) this.m_Slot * 100), 200f, 90f, 20f);
+
       if (this.isLocalPlayer)
       {
         GUI.Label(position, " [ You ]");
+
         if (this.m_ReadyToBegin)
         {
           position.y += 25f;
@@ -220,13 +223,15 @@ namespace UnityEngine.Networking
           position.y += 25f;
           if (GUI.Button(position, "Not Ready"))
             this.SendReadyToBeginMessage();
+
           position.y += 25f;
           if (!GUI.Button(position, "Remove"))
             return;
+
           ClientScene.RemovePlayer(this.GetComponent<NetworkIdentity>().playerControllerId);
         }
       }
-      else
+      else // show other lobby players gui's
       {
         GUI.Label(position, "Player [" + (object) this.netId + "]");
         position.y += 25f;
