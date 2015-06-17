@@ -179,12 +179,16 @@ namespace UnityEngine.Networking
       {
         if (!((UnityEngine.Object) this.m_MyView == (UnityEngine.Object) null))
           return this.m_MyView;
+
         this.m_MyView = this.GetComponent<NetworkIdentity>();
+
         if ((UnityEngine.Object) this.m_MyView == (UnityEngine.Object) null && LogFilter.logError)
           Debug.LogError((object) "There is no NetworkIdentity on this object. Please add one.");
+
         return this.m_MyView;
       }
     }
+
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected void SendCommandInternal(NetworkWriter writer, int channelId, string cmdName)
@@ -230,6 +234,8 @@ namespace UnityEngine.Networking
       return this.InvokeCommandDelegate(cmdHash, reader);
     }
 
+
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected void SendRPCInternal(NetworkWriter writer, int channelId, string rpcName)
     {
@@ -267,6 +273,8 @@ namespace UnityEngine.Networking
     {
       return this.InvokeRpcDelegate(cmdHash, reader);
     }
+      
+
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected void SendEventInternal(NetworkWriter writer, int channelId, string eventName)
@@ -306,13 +314,16 @@ namespace UnityEngine.Networking
       return this.InvokeSyncEventDelegate(cmdHash, reader);
     }
 
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     public virtual bool InvokeSyncList(int cmdHash, NetworkReader reader)
     {
       return this.InvokeSyncListDelegate(cmdHash, reader);
     }
 
-    [EditorBrowsable(EditorBrowsableState.Never)]
+
+
+      [EditorBrowsable(EditorBrowsableState.Never)]
     protected static void RegisterCommandDelegate(System.Type invokeClass, int cmdHash, NetworkBehaviour.CmdDelegate func)
     {
       // check if the command is already registered
@@ -345,6 +356,8 @@ namespace UnityEngine.Networking
       objArray[index4] = (object) name;
       Debug.Log((object) string.Concat(objArray));
     }
+
+
 
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected static void RegisterRpcDelegate(System.Type invokeClass, int cmdHash, NetworkBehaviour.CmdDelegate func)
@@ -381,6 +394,8 @@ namespace UnityEngine.Networking
       Debug.Log((object) string.Concat(objArray));
     }
 
+
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected static void RegisterEventDelegate(System.Type invokeClass, int cmdHash, NetworkBehaviour.CmdDelegate func)
     {
@@ -416,6 +431,8 @@ namespace UnityEngine.Networking
       Debug.Log((object) string.Concat(objArray));
     }
 
+
+
     [EditorBrowsable(EditorBrowsableState.Never)]
     protected static void RegisterSyncListDelegate(System.Type invokeClass, int cmdHash, NetworkBehaviour.CmdDelegate func)
     {
@@ -450,6 +467,9 @@ namespace UnityEngine.Networking
       Debug.Log((object) string.Concat(objArray));
     }
 
+
+    // used to get the name of the Invoker object, Invoker is protected nested class here. DebugString creates a string chain of 
+    // of properties of a given command
     internal static string GetInvoker(int cmdHash)
     {
       if (!NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash))
@@ -457,6 +477,8 @@ namespace UnityEngine.Networking
 
       return NetworkBehaviour.s_CmdHandlerDelegates[cmdHash].DebugString();
     }
+
+
 
     internal static void DumpInvokers()
     {
@@ -500,10 +522,12 @@ namespace UnityEngine.Networking
       }
     }
 
+
     internal bool ContainsCommandDelegate(int cmdHash)
     {
       return NetworkBehaviour.s_CmdHandlerDelegates.ContainsKey(cmdHash);
     }
+
 
     internal bool InvokeCommandDelegate(int cmdHash, NetworkReader reader)
     {
@@ -536,9 +560,11 @@ namespace UnityEngine.Networking
         Debug.LogError((object) string.Concat(strArray));
         return false;
       }
+
       invoker.invokeFunction(this, reader);
       return true;
     }
+
 
     internal bool InvokeRpcDelegate(int cmdHash, NetworkReader reader)
     {

@@ -193,6 +193,7 @@ namespace UnityEngine.Networking
     }
 
 
+    // utility method to find an empty slot for a player
     private byte FindSlot()
     {
       for (byte index = (byte) 0; (int) index < this.maxPlayers; ++index)
@@ -203,6 +204,7 @@ namespace UnityEngine.Networking
 
       return byte.MaxValue;
     }
+
 
 
     private void SceneLoadedForPlayer(NetworkConnection conn, GameObject lobbyPlayerGameObject)
@@ -238,7 +240,7 @@ namespace UnityEngine.Networking
         pendingPlayer.lobbyPlayer = lobbyPlayerGameObject;
         this.pendingPlayers.Add(pendingPlayer);
       }
-      else // if we are not in the lobby scene then we are setting up for game scene
+      else // if we are not in the lobby scene then we are setting up for game scene and will attempt to change to the game scene player object
       {
         short playerControllerId = lobbyPlayerGameObject.GetComponent<NetworkIdentity>().playerControllerId;
 
@@ -260,7 +262,6 @@ namespace UnityEngine.Networking
           return;
 
         NetworkServer.ReplacePlayerForConnection(conn, gameObject, playerControllerId);
-
       }
     }
 
@@ -338,7 +339,8 @@ namespace UnityEngine.Networking
     }
 
 
-
+    // next 2 methods are called from within the callbacks that are overridden down below from the NetworkManager class
+    // for client connection/disconnect events
     private void CallOnClientEnterLobby()
     {
       this.OnLobbyClientEnter(); // Call to virtual method to run any server hooks for when a player enters the lobby
@@ -394,7 +396,7 @@ namespace UnityEngine.Networking
     }
 
 
-     // override when a new client connects to the server
+     // override for when a new client connects to the server
     public override void OnServerConnect(NetworkConnection conn)
     {
       if (this.numPlayers >= this.maxPlayers)
@@ -409,6 +411,7 @@ namespace UnityEngine.Networking
         this.OnLobbyServerConnect(conn);
       }
     }
+
 
     public override void OnServerDisconnect(NetworkConnection conn)
     {
