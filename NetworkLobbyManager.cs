@@ -471,7 +471,9 @@ namespace UnityEngine.Networking
     {
       short playerControllerId = player.playerControllerId;
       this.lobbySlots[(int) player.gameObject.GetComponent<NetworkLobbyPlayer>().slot] = (NetworkLobbyPlayer) null;
-      base.OnServerRemovePlayer(conn, player);
+
+      base.OnServerRemovePlayer(conn, player); // base implementation destroys the player gameobject
+
       foreach (NetworkLobbyPlayer networkLobbyPlayer in this.lobbySlots)
       {
         if ((UnityEngine.Object) networkLobbyPlayer != (UnityEngine.Object) null)
@@ -482,7 +484,7 @@ namespace UnityEngine.Networking
           NetworkServer.SendToReady((GameObject) null, (short) 43, (MessageBase) NetworkLobbyManager.s_LobbyReadyToBeginMessage);
         }
       }
-      this.OnLobbyServerPlayerRemoved(conn, playerControllerId);
+      this.OnLobbyServerPlayerRemoved(conn, playerControllerId); // empty virtual hook method
     }
 
 
@@ -496,8 +498,10 @@ namespace UnityEngine.Networking
           {
             NetworkIdentity component = networkLobbyPlayer.GetComponent<NetworkIdentity>();
             PlayerController playerController;
+
             if (component.connectionToClient.GetPlayerController(component.playerControllerId, out playerController))
               NetworkServer.Destroy(playerController.gameObject);
+
             networkLobbyPlayer.GetComponent<NetworkLobbyPlayer>().readyToBegin = false;
             NetworkServer.ReplacePlayerForConnection(component.connectionToClient, networkLobbyPlayer.gameObject, component.playerControllerId);
           }
